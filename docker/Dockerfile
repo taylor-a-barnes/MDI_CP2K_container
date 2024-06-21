@@ -11,12 +11,17 @@ ENV CUDA_CACHE_DISABLE 1
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends \
-        wget \
-        git \
-        gfortran && \
-    rm -rf /tmp/* /var/tmp/* /var/lib/apt/lists/*
+#RUN apt-get update -y && \
+#    apt-get install -y --no-install-recommends \
+#        libmpich-dev \
+#        mpich \
+#        wget \
+#        git \
+#        gfortran && \
+#    rm -rf /tmp/* /var/tmp/* /var/lib/apt/lists/*
+RUN apt-get update -qq && apt-get install -qq --no-install-recommends \
+    g++ gcc gfortran libmpich-dev mpich openssh-client python3 libtool libtool-bin \
+    bzip2 ca-certificates git make patch pkg-config unzip wget zlib1g-dev
 
 #RUN apt-get remove --purge --auto-remove cmake -y && \
 #    apt-get update -y && \
