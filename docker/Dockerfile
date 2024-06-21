@@ -4,6 +4,11 @@
 
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
+# Setup CUDA environment
+ENV CUDA_PATH /usr/local/cuda
+ENV LD_LIBRARY_PATH /usr/local/cuda/lib64
+ENV CUDA_CACHE_DISABLE 1
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -y && \
