@@ -1,0 +1,36 @@
+code_name: 'CP2K'
+docker:
+  image_name: 'mdi/cp2k'
+  gpu:
+    type: 'nvidia'
+
+  build_image:
+    - apt-get clean
+    - apt-get update --fix-missing
+    - apt-get install -y git cmake wget vim libopenblas-dev libfftw3-dev libfftw3-doc libfftw3-mpi-dev unzip cuda
+    - apt-get upgrade -y gcc-12
+
+  build_engine:
+    - |
+      if [ ! -d "build/cp2k" ]; then
+        git clone --recursive https://github.com/cp2k/cp2k.git build/cp2k
+      fi
+    - cd /repo/build/cp2k/tools/toolchain
+    - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda-12.5/lib64
+    - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/lib/x86_64-linux-gnu/
+    - ./install_cp2k_toolchain.sh --with-libxsmm=install --with-openblas=system --with-fftw=system --gpu-ver=K80 --enable-cuda
+    - cp /repo/build/cp2k/tools/toolchain/install/arch/* /repo/build/cp2k/arch
+    - source /repo/build/cp2k/tools/toolchain/install/setup
+    - cd /repo/build/cp2k
+    - make -j 8 ARCH=local VERSION="ssmp sdbg"
+
+
+  validate_engine:
+    - echo "Insert code that will confirm that your code has been built successfully"
+    - exit 1
+
+engine_tests:
+  # Provide at least one example input that can be used to test your code's MDI functionality
+  script:
+    - echo "Insert commands to run an example calculation here"
+    - exit 1
