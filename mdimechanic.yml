@@ -11,6 +11,8 @@ docker:
     - apt-get upgrade -y gcc-12
 
   build_engine:
+    # NOTE: For more guidance about the build process, see:
+    # https://github.com/cp2k/cp2k-containers/blob/master/docker/2023.2_mpich_native_cuda_V100_psmp.Dockerfile
     - |
       if [ ! -d "build/cp2k" ]; then
         git clone --recursive https://github.com/cp2k/cp2k.git build/cp2k
@@ -26,8 +28,9 @@ docker:
 
 
   validate_engine:
-    - echo "Insert code that will confirm that your code has been built successfully"
-    - exit 1
+    - cd /repo/tests
+    - export PATH=${PATH}:/repo/build/cp2k/exe/local
+    - mpiexec -n 4 -genv OMP_NUM_THREADS=1 cp2k.ssmp -i glyco_238.inp
 
 engine_tests:
   # Provide at least one example input that can be used to test your code's MDI functionality
