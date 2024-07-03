@@ -53,7 +53,7 @@ docker:
     #
     - mkdir -p /repo/build/cp2k/build
     - cd /repo/build/cp2k/build
-    - cmake -DCMAKE_WITH_GPU=P100 -DCP2K_USE_LIBTORCH=OFF -DCP2K_USE_CUDA=ON -DCP2K_USE_CUSOLVER_MP=OFF ..
+    - cmake -DCMAKE_WITH_GPU=P100 -DCP2K_USE_LIBTORCH=OFF -DCP2K_USE_CUDA=ON -DCP2K_USE_CUSOLVER_MP=OFF -DCMAKE_Fortran_FLAGS="-fno-lto" -DCMAKE_C_FLAGS="-fno-lto" -DCMAKE_CXX_FLAGS="-fno-lto" ..
     - make -j 4
     #
     #
@@ -79,4 +79,6 @@ engine_tests:
       container1:
         image: 'mdi/dftb:cp2k'
         script:
-          - /repo/build/cp2k/exe/local_cuda/cp2k.psmp glyco_238.inp
+          - cd /repo/tests
+          #- /repo/build/cp2k/exe/local_cuda/cp2k.psmp glyco_238.inp
+          - /repo/build/cp2k/build/bin/cp2k.psmp glyco_238.inp
