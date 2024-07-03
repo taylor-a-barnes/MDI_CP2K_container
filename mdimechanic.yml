@@ -7,21 +7,61 @@ docker:
   build_image:
     - apt-get clean
     - apt-get update --fix-missing
-    - apt-get install -y git
+    - apt-get install -y git cmake libblas-dev liblapack-dev libfftw3-dev libhwloc-dev libfabric-dev pip
+    
+    - pip install pymdi
+    - pip install numpy
+    - pip install mpi4py
+    
+    # Install ScaLAPACK
+    - wget https://github.com/Reference-ScaLAPACK/scalapack/archive/refs/tags/v2.2.0.tar.gz
+    - tar -xf v2.2.0.tar.gz
+    - cd scalapack-2.2.0
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_INSTALL_PREFIX=/scalapack -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_SHARED_LIBS=NO -DCMAKE_BUILD_TYPE=Release .. -DBUILD_TESTING=NO -DSCALAPACK_BUILD_TESTS=NO -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch -fPIC" -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" ..
+    - make
+    - make install
+    - cp /scalapack/lib/*.a /usr/lib/x86_64-linux-gnu
+    - cp /scalapack/lib/pkgconfig/scalapack.pc /usr/lib/x86_64-linux-gnu/pkgconfig
+    #- echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/scalapack" >> ~/.profile
+    #- echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/scalapack" >> ~/.bashrc
+    
+    # Install DBCSR
+    - wget https://github.com/cp2k/dbcsr/releases/download/v2.6.0/dbcsr-2.6.0.tar.gz
+    - tar -xf dbcsr-2.6.0.tar.gz
+    - cd dbcsr-2.6.0
+    - mkdir build_cpu
+    - cd build_cpu
+    - cmake -DUSE_OPENMP=ON -DBUILD_TESTING=NO -DWITH_EXAMPLES=NO -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch -Wno-error=uninitialized -Wno-error=lto-type-mismatch -fPIC" -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" ..
+    - make -j 4
+    - make install
 
   build_engine:
-    - |
-      if [ ! -d "build/cp2k" ]; then
-        git clone --recursive https://github.com/cp2k/cp2k.git build/cp2k
-      fi
-    - cd /repo/build/cp2k/tools/toolchain
     - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda-12.5/lib64
     - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/lib/x86_64-linux-gnu/
-    - ./install_cp2k_toolchain.sh -j 8 --install-all --gpu-ver=P100 --enable-cuda=yes --with-libtorch=no --with-cusolvermp=no --target-cpu=native --with-gcc=system --with-mpich=system
-    - cp /repo/build/cp2k/tools/toolchain/install/arch/* /repo/build/cp2k/arch
-    - source /repo/build/cp2k/tools/toolchain/install/setup
-    - cd /repo/build/cp2k
-    - make -j 8 ARCH=local_cuda VERSION="psmp"
+    - |
+      if [ ! -d "/repo/build/cp2k" ]; then
+        git clone --recursive https://github.com/taylor-a-barnes/cp2k.git /repo/build/cp2k
+        cd /repo/build/cp2k/tools/toolchain
+        # This line is for doing a toolchain install
+        #./install_cp2k_toolchain.sh -j 8 --install-all --gpu-ver=P100 --enable-cuda=yes --with-libtorch=no --with-cusolvermp=no --target-cpu=native --with-gcc=system --with-mpich=system
+        # This line is for doing a cmake install
+      fi
+    #
+    #
+    #
+    - mkdir -p /repo/build/cp2k/build
+    - cd /repo/build/cp2k/build
+    - cmake -DCMAKE_WITH_GPU=P100 -DCP2K_USE_LIBTORCH=OFF -DCP2K_USE_CUDA=ON -DCP2K_USE_CUSOLVER_MP=OFF ..
+    - make -j 4
+    #
+    #
+    #
+    #- cp /repo/build/cp2k/tools/toolchain/install/arch/* /repo/build/cp2k/arch
+    #- source /repo/build/cp2k/tools/toolchain/install/setup
+    #- cd /repo/build/cp2k
+    #- make -j 8 ARCH=local_cuda VERSION="psmp"
 
   validate_engine:
     - cd /repo/tests
@@ -33,3 +73,10 @@ engine_tests:
   script:
     - echo "Insert commands to run an example calculation here"
     - exit 1
+
+  test:
+    containers:
+      container1:
+        image: 'mdi/dftb:cp2k'
+        script:
+          - /repo/build/cp2k/exe/local_cuda/cp2k.psmp glyco_238.inp
