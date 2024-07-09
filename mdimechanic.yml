@@ -42,7 +42,7 @@ docker:
     - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/lib/x86_64-linux-gnu/
     - |
       if [ ! -d "/repo/build/cp2k" ]; then
-        git clone --recursive https://github.com/taylor-a-barnes/cp2k.git /repo/build/cp2k
+        git clone --recursive https://github.com/taylor-a-barnes/cp2k.git --branch mdi /repo/build/cp2k
         cd /repo/build/cp2k/tools/toolchain
         # This line is for doing a toolchain install
         #./install_cp2k_toolchain.sh -j 8 --install-all --gpu-ver=P100 --enable-cuda=yes --with-libtorch=no --with-cusolvermp=no --target-cpu=native --with-gcc=system --with-mpich=system
@@ -51,10 +51,16 @@ docker:
     #
     #
     #
-    - mkdir -p /repo/build/cp2k/build
+    - |
+      if [ ! -d "/repo/build/cp2k/build" ]; then
+        mkdir /repo/build/cp2k/build
+        cd /repo/build/cp2k/build
+        cmake -DCMAKE_WITH_GPU=P100 -DCP2K_USE_LIBTORCH=OFF -DCP2K_USE_CUDA=ON -DCP2K_USE_MDI=ON -DCP2K_USE_CUSOLVER_MP=OFF -DCMAKE_Fortran_FLAGS="-fno-lto" -DCMAKE_C_FLAGS="-fno-lto" -DCMAKE_CXX_FLAGS="-fno-lto" ..
+      fi
+    #- mkdir -p /repo/build/cp2k/build
     - cd /repo/build/cp2k/build
-    - cmake -DCMAKE_WITH_GPU=P100 -DCP2K_USE_LIBTORCH=OFF -DCP2K_USE_CUDA=ON -DCP2K_USE_CUSOLVER_MP=OFF -DCMAKE_Fortran_FLAGS="-fno-lto" -DCMAKE_C_FLAGS="-fno-lto" -DCMAKE_CXX_FLAGS="-fno-lto" ..
-    - make -j 4
+    #- cmake -DCMAKE_WITH_GPU=P100 -DCP2K_USE_LIBTORCH=OFF -DCP2K_USE_CUDA=ON -DCP2K_USE_MDI=ON -DCP2K_USE_CUSOLVER_MP=OFF -DCMAKE_Fortran_FLAGS="-fno-lto" -DCMAKE_C_FLAGS="-fno-lto" -DCMAKE_CXX_FLAGS="-fno-lto" ..
+    - make -j 4 VERBOSE=1
     #
     #
     #
@@ -66,7 +72,7 @@ docker:
   validate_engine:
     - cd /repo/tests
     - export PATH=${PATH}:/repo/build/cp2k/exe/local
-    - mpiexec -n 4 -genv OMP_NUM_THREADS=1 cp2k.psmp -i glyco_238.inp
+    - mpiexec -n 4 -genv OMP_NUM_THREADS=1 cp2k.psmp --mdi "-name CP2K -method TCP -port 8021 -hostname localhost" -i glyco_238.inp
 
 engine_tests:
   # Provide at least one example input that can be used to test your code's MDI functionality
@@ -77,8 +83,8 @@ engine_tests:
   test:
     containers:
       container1:
-        image: 'mdi/dftb:cp2k'
+        image: 'mdi/cp2k:dev'
         script:
           - cd /repo/tests
           #- /repo/build/cp2k/exe/local_cuda/cp2k.psmp glyco_238.inp
-          - /repo/build/cp2k/build/bin/cp2k.psmp glyco_238.inp
+          - /repo/build/cp2k/build/bin/cp2k.psmp --mdi "-role ENGINE -name CP2K -method TCP -port 8021 -hostname localhost" glyco_238.inp > output
