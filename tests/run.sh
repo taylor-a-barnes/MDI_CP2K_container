@@ -1,0 +1,2 @@
+python3 min_driver.py -mdi "-role DRIVER -name driver -method TCP -port 8021" &
+/repo/build/cp2k/build/bin/cp2k.psmp --mdi "-role ENGINE -name CP2K -method TCP -port 8021 -hostname localhost" glyco_238.inp > output
