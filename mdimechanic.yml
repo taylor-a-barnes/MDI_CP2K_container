@@ -28,18 +28,37 @@ docker:
     #- echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/scalapack" >> ~/.bashrc
     
     # Install DBCSR
-    - wget https://github.com/cp2k/dbcsr/releases/download/v2.6.0/dbcsr-2.6.0.tar.gz
-    - tar -xf dbcsr-2.6.0.tar.gz
-    - cd dbcsr-2.6.0
-    - mkdir build_cpu
-    - cd build_cpu
-    - cmake -DUSE_OPENMP=ON -DBUILD_TESTING=NO -DWITH_EXAMPLES=NO -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch -Wno-error=uninitialized -Wno-error=lto-type-mismatch -fPIC" -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" ..
-    - make -j 4
-    - make install
+    #- wget https://github.com/cp2k/dbcsr/releases/download/v2.6.0/dbcsr-2.6.0.tar.gz
+    #- tar -xf dbcsr-2.6.0.tar.gz
+    #- cd dbcsr-2.6.0
+    #- mkdir build_cpu
+    #- cd build_cpu
+    #- cmake -DUSE_OPENMP=ON -DBUILD_TESTING=NO -DWITH_EXAMPLES=NO -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch -Wno-error=uninitialized -Wno-error=lto-type-mismatch -fPIC" -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" ..
+    #- make -j 4
+    #- make install
 
   build_engine:
     - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda-12.5/lib64
     - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/lib/x86_64-linux-gnu/
+    - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/repo/build/install
+    - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/repo/build/install/lib
+
+    # Build DBCSR
+    - |
+      if [ ! -d "/repo/build/dbcsr" ]; then
+        git clone --recursive https://github.com/taylor-a-barnes/dbcsr.git --branch mdi /repo/build/dbcsr
+      fi
+    - |
+      if [ ! -d "/repo/build/dbcsr/build_cpu" ]; then
+        mkdir /repo/build/dbcsr/build_cpu
+        cd /repo/build/dbcsr/build_cpu
+        cmake -DUSE_OPENMP=ON -DBUILD_TESTING=NO -DWITH_EXAMPLES=NO -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch -Wno-error=uninitialized -Wno-error=lto-type-mismatch -fPIC" -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_INSTALL_PREFIX="/repo/build/install" ..
+      fi
+    - cd /repo/build/dbcsr/build_cpu
+    - make -j 4
+    - make install
+
+    # Build CP2K
     - |
       if [ ! -d "/repo/build/cp2k" ]; then
         git clone --recursive https://github.com/taylor-a-barnes/cp2k.git --branch mdi /repo/build/cp2k
@@ -55,7 +74,7 @@ docker:
       if [ ! -d "/repo/build/cp2k/build" ]; then
         mkdir /repo/build/cp2k/build
         cd /repo/build/cp2k/build
-        cmake -DCMAKE_WITH_GPU=P100 -DCP2K_USE_LIBTORCH=OFF -DCP2K_USE_CUDA=ON -DCP2K_USE_MDI=ON -DCP2K_USE_CUSOLVER_MP=OFF -DCMAKE_Fortran_FLAGS="-fno-lto" -DCMAKE_C_FLAGS="-fno-lto" -DCMAKE_CXX_FLAGS="-fno-lto" ..
+        cmake -DCMAKE_WITH_GPU=P100 -DCP2K_USE_LIBTORCH=OFF -DCP2K_USE_CUDA=ON -DCP2K_USE_MDI=ON -DCP2K_USE_CUSOLVER_MP=OFF -DCMAKE_Fortran_FLAGS="-fno-lto" -DCMAKE_C_FLAGS="-fno-lto" -DCMAKE_CXX_FLAGS="-fno-lto" -DCMAKE_PREFIX_PATH="/repo/build/install" ..
       fi
     #- mkdir -p /repo/build/cp2k/build
     - cd /repo/build/cp2k/build
